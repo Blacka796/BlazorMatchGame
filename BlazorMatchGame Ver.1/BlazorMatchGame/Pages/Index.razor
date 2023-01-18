@@ -1,0 +1,201 @@
+﻿@page "/"
+
+@using System.Timers
+
+<style>
+    .container{
+        width: 400px;
+    }
+
+    button{
+        width: 100px;
+        height: 100px;
+        font-size: 50px;
+    }
+</style>
+
+<div class="row">
+    <h2>Time: @timeDisplay</h2>
+</div>
+
+<!--Main part of the matching game-->
+<div class="container">
+    <div class="row">
+        @for (var animalNumber = 0; animalNumber < shuffledAnimals.Count; animalNumber++)
+        {
+            var animal = shuffledAnimals[animalNumber];
+            var uniqueDescription = $"Button #{animalNumber}";
+            <div class="col-3">
+                <button @onclick="@(() => ButtonClick(animal, uniqueDescription))" type="button" class="btn-outline-dark">
+                    <h1>@animal</h1>
+                </button>
+            </div>
+        }
+    </div>
+
+    <div class="row">
+        <h2>Matches You Found: @matchesFound</h2>
+    </div>
+
+    <div class="row">
+        <h2>Matches You Left: @matchesLeft</h2>
+    </div>
+
+    <div class="row">
+        <h2>Score: @score </h2>
+    </div>
+
+    <!--Radio button for choosing lives-->
+    <!--Not finished yet, cannot passing the value to C#-->
+    <div class="row mt-2">
+        <div class="col-sm-6">
+            How many lives do you need?
+        </div>
+        <div class="col-sm-6 btn-group" role="group">
+            @for (int liveNumber = 1; liveNumber <= 4; liveNumber++)
+            {
+                string valueToDisplay = $"Lives: {liveNumber}";
+                <button type="button" class="btn btn-secondary" @onclick="() => LiveClick(valueToDisplay)"> @liveNumber
+
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="row mt-1">
+        <h2>Lives: <strong>@DisplayValue</strong> </h2>
+    </div>
+
+    <div>
+        <input type="number" id="Lives" />
+    </div>
+</div>
+
+@code {
+    List<string> animalEmoji = new List<string>()
+    {
+        "🐶","🐶",
+        "🐱","🐱",
+        "🐹","🐹",
+        "🦊","🦊",
+        "🐼","🐼",
+        "🐮","🐮",
+        "🐷","🐷",
+        "🦁","🦁",
+    };
+
+    List<string> shuffledAnimals = new List<string>();
+
+    public string DisplayValue = "";
+
+
+    //Matches check
+    int matchesFound = 0;
+    int matchesLeft = 8;
+
+    //Record the player's score, correct match will add 1 point, wrong match will devide 1 point
+    int score = 0;
+
+    int lives = 2;//This lives works, but it does not work with the Radio Button yet
+
+
+    //Timer
+    Timer timer;
+    int tenthsOfSecondElapsed = 0;
+    string timeDisplay;
+
+    protected override void OnInitialized()
+    {
+        timer = new Timer(100);
+        timer.Elapsed += Timer_Tick;
+
+        SetUpGame();
+    }
+
+    private void SetUpGame()
+    {
+        Random random = new Random();
+        shuffledAnimals = animalEmoji.OrderBy(item => random.Next()).ToList();
+
+        //Reset the data
+        matchesFound = 0;
+        matchesLeft = 8;
+
+        score = 0;
+
+        lives = 2;
+
+        tenthsOfSecondElapsed = 0; //set up timer to 0 at the beginning
+    }
+
+    string lastAnimalsFound = string.Empty;
+    string lastDescription = string.Empty;
+
+    private void ButtonClick(string animal, string animalDescription)
+    {
+        //if player click the same animal twice, it should not be the correct match
+        if (lastAnimalsFound == string.Empty)
+        {
+            lastAnimalsFound = animal;
+            lastDescription = animalDescription;
+
+            timer.Start();
+        // if player click the right match, and it is not the same animal, both animals will disappear
+        } else if ((lastAnimalsFound == animal) && (animalDescription != lastDescription))
+        {
+            lastAnimalsFound = string.Empty;
+
+            shuffledAnimals = shuffledAnimals.Select(a => a.Replace(animal, string.Empty)).ToList();
+
+            score++; //add 1 point
+
+            matchesFound++; // record the right matches
+            matchesLeft--; // record the left matches
+
+            //if player found all matches, win the game and reset game when end
+            if (matchesFound == 8)
+            {
+                timer.Stop();
+                timeDisplay += " You WIN! - Click Animals to Play Again";
+
+
+                SetUpGame();
+            }
+        }
+        // if player matches worng, it will devide 1 point and loose 1 health
+        else
+        {
+            score--;
+
+            lives--;
+
+            lastAnimalsFound = string.Empty;
+            //if live < 0, the game will end. Not finished yet, still need to work with radio button
+        } if (lives <= 0)
+        {
+            timer.Stop();
+            timeDisplay += " You LOSE! - Click Animals to Play Again";
+
+            SetUpGame();
+        }
+    }
+
+    //Timer function
+    private void Timer_Tick(object source, ElapsedEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            tenthsOfSecondElapsed ++;
+            timeDisplay = (tenthsOfSecondElapsed / 10f).ToString("0.0s");
+            StateHasChanged();
+        });
+    }
+
+    //Display the radio button
+    void LiveClick(string displayValue)
+    {
+        DisplayValue = displayValue;
+    }
+
+    //Almost finished, still need to figure out the radio button, and I might going to change the timer and the way of playing
+}
